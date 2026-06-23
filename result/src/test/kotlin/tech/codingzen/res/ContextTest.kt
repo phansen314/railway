@@ -1,7 +1,9 @@
 package tech.codingzen.res
 
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -42,6 +44,26 @@ class ContextTest {
         // index 0 == closest to the error (innermost pushed first)
         assertEquals(listOf("inner", "outer"), r.contextChain().map { it.message })
         assertEquals("outer → inner → boom", r.contextSummary())
+    }
+
+    @Test
+    fun `context with a location attaches both message and source location`() {
+        val r = fail<String>("boom")
+            .context({ "parsing" }, { SourceLocation("A.kt", 42, "parse") })
+        val frame = r.contextChain().single()
+        assertEquals("parsing", frame.message)
+        assertEquals(SourceLocation("A.kt", 42, "parse"), frame.location)
+        assertTrue(r.renderContext().contains("at A.kt:42 in parse"))
+    }
+
+    @Test
+    fun `context with a location is a no-op on Ok and runs neither lambda`() {
+        var ran = false
+        val r = ok<Int>(1)
+            .context({ ran = true; "nope" }, { ran = true; SourceLocation("X.kt", 1) })
+        assertEquals(1, r.getOrNull())
+        assertTrue(!ran)
+        assertTrue(r.contextChain().isEmpty())
     }
 
     @Test
@@ -152,6 +174,31 @@ class ContextTest {
     }
 
     @Test
+    fun `withFrame with a location annotates an escaping failure with the source location`() {
+        val r = rail<Int, String> {
+            withFrame("parsing inputs", { SourceLocation("B.kt", 99, "load") }) {
+                val a = ok(20).bind()
+                val b: Int = fail<String>("nope").bind()
+                a + b
+            }
+        }
+        assertEquals("nope", r.failureOrNull())
+        val frame = r.contextChain().single()
+        assertEquals("parsing inputs", frame.message)
+        assertEquals(SourceLocation("B.kt", 99, "load"), frame.location)
+    }
+
+    @Test
+    fun `withFrame with a location does not run the location lambda on an Ok region`() {
+        var ran = false
+        val r = rail<Int, String> {
+            withFrame("region", { ran = true; SourceLocation("X.kt", 1) }) { ok(40).bind() + 2 }
+        }
+        assertEquals(42, r.getOrNull())
+        assertTrue(!ran)
+    }
+
+    @Test
     fun `withFrame only annotates its own rail, not a nested rail failure`() {
         val r = rail<Int, String> {
             withFrame("outer region") {
@@ -179,6 +226,24 @@ class ContextTest {
             """.trimIndent(),
             rendered,
         )
+    }
+
+    @Test
+    fun `renderContext substitutes a placeholder when an attachment toString throws`() {
+        val bad = object {
+            override fun toString(): String = throw IllegalStateException("nope")
+        }
+        val rendered = fail<String>("boom").contextFrame { Frame("step", attachment = bad) }.renderContext()
+        assertTrue(rendered.contains("<error rendering attachment: IllegalStateException>"))
+    }
+
+    @Test
+    fun `renderContext propagates a fatal exception thrown while rendering an attachment`() {
+        val fatal = object {
+            override fun toString(): String = throw CancellationException("cancelled")
+        }
+        val r = fail<String>("boom").contextFrame { Frame("step", attachment = fatal) }
+        assertFailsWith<CancellationException> { r.renderContext() }
     }
 
     @Test

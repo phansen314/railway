@@ -32,7 +32,12 @@ public fun Res<*, *>.renderContext(): String {
             frame.location?.let { appendLine(); append("     at ").append(it) }
             frame.attachment?.let {
                 appendLine(); append("     attachment=")
-                try { append(it) } catch (_: Exception) { append("<error rendering attachment>") }
+                try {
+                    append(it)
+                } catch (e: Exception) {
+                    if (isFatal(e)) throw e
+                    append("<error rendering attachment: ").append(e.javaClass.simpleName).append('>')
+                }
             }
         }
     }

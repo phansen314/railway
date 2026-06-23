@@ -53,6 +53,7 @@ mavenPublishing {
             developer {
                 id.set("phansen314")
                 name.set("phansen")
+                email.set("codingzen314@gmail.com")
             }
         }
         scm {
