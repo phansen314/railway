@@ -148,7 +148,7 @@ val msg: String = sum.fold(
 )
 
 // Recover a defect (the defect arises from a thrown exception, auto-routed)
-val safe: Res<Int, String> = ok("x").map<Int, String, Int> { error("boom") }.catchAll { ok(-1) }
+val safe: Res<Int, String> = ok("x").map { error("boom") }.catchAll { ok(-1) }
 
 // Combine
 val combined: Res<Int, String> = zip(ok(20), ok(22)) { x, y -> x + y }   // Ok(42)

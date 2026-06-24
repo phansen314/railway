@@ -17,11 +17,16 @@ the `:result` module, package `tech.codingzen.res`.
 
 ```kotlin
 dependencies {
-    implementation("tech.codingzen:railway:1.0.0")
+    implementation("tech.codingzen:railway:1.0.1")
 }
 ```
 
 Zero transitive dependencies beyond the Kotlin standard library. Requires a JVM 21+ toolchain.
+
+> **New to result types?** Start with the [`TUTORIAL.md`](TUTORIAL.md) — a
+> read-top-to-bottom lesson that builds up the API from scratch through one worked
+> example. The [`AGENTS.md`](AGENTS.md) reference is the lookup guide once you know
+> your way around.
 
 > **Writing code against this library (human or AI agent)? Start with
 > [`AGENTS.md`](AGENTS.md)** — it covers the 3-rail mental model, the non-obvious
