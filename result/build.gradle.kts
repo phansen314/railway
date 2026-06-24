@@ -29,9 +29,13 @@ dokka {
 }
 
 dependencies {
-    // Foundation phase: pure types + data structures. No coroutines dependency yet —
-    // `kotlin.coroutines.cancellation.CancellationException` ships in kotlin-stdlib.
+    // Pure types + data structures — zero runtime dependencies. Suspend support is
+    // inline-from-suspend (the combinators and `rail { }` are inline, so suspend lambdas
+    // work from a suspend caller) and `CancellationException` ships in kotlin-stdlib, so
+    // coroutines is needed only to *drive* the suspend test suite — never at runtime.
     testImplementation(kotlin("test"))
+    testImplementation(libs.kotlinxCoroutinesCore)
+    testImplementation(libs.kotlinxCoroutinesTest)
 }
 
 // Coordinates (GROUP / POM_ARTIFACT_ID / VERSION_NAME) come from gradle.properties.

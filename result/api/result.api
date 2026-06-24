@@ -1,17 +1,26 @@
+public final class tech/codingzen/res/CatchingKt {
+	public static final fun catching (Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+	public static final fun catching (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+}
+
 public final class tech/codingzen/res/CombinatorsKt {
 	public static final fun defectOrNull-T7cPbJw (Ljava/lang/Object;)Ljava/lang/Throwable;
 	public static final fun failureOrNull-T7cPbJw (Ljava/lang/Object;)Ljava/lang/Object;
+	public static final fun filterOrElse-qfqrFBU (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
 	public static final fun flatMap-YcTGO_w (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
 	public static final fun flatten-T7cPbJw (Ljava/lang/Object;)Ljava/lang/Object;
 	public static final fun fold-yV6gr-I (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public static final fun getOrDefault-YcTGO_w (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
 	public static final fun getOrElse-YcTGO_w (Ljava/lang/Object;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
 	public static final fun getOrNull-T7cPbJw (Ljava/lang/Object;)Ljava/lang/Object;
 	public static final fun getOrThrow-T7cPbJw (Ljava/lang/Object;)Ljava/lang/Object;
 	public static final fun map-YcTGO_w (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public static final fun mapBoth-qfqrFBU (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
 	public static final fun mapFailure-YcTGO_w (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
 	public static final fun orElse-YcTGO_w (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
 	public static final fun recover-YcTGO_w (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
 	public static final fun sealToDefect (Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+	public static final fun swap-T7cPbJw (Ljava/lang/Object;)Ljava/lang/Object;
 	public static final fun unwrapOk (Ljava/lang/Object;)Ljava/lang/Object;
 }
 
@@ -174,6 +183,11 @@ public final class tech/codingzen/res/TapsKt {
 	public static final fun onDefect-YcTGO_w (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
 	public static final fun onFailure-YcTGO_w (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
 	public static final fun onOk-YcTGO_w (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+}
+
+public final class tech/codingzen/res/TraverseKt {
+	public static final fun sequence (Ljava/lang/Iterable;)Ljava/lang/Object;
+	public static final fun traverse (Ljava/lang/Iterable;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
 }
 
 public final class tech/codingzen/res/ZipKt {

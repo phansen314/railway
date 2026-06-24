@@ -59,11 +59,17 @@ Construction
 There is no public Defect constructor: a Defect only *arises* from a thrown
 exception (e.g. inside `rail { }` / `map { }`), it is never built deliberately.
 
+Capture — adapt a throwing call at the boundary
+| `catching { s }` → `Res<S, Nothing>` (throw → Defect) · `catching({ t -> f }) { s }` → `Res<S, F>` (throw → typed Failure) |
+
+Both rails
+| `mapBoth(onOk, onFailure)` → `Res<S2, F2>` (Defect passes through; frames preserved) · `swap()` → `Res<F, S>` (Ok↔Failure; Defect stays; frames dropped) |
+
 State (predicates)
 | `isOk` · `isFailure` · `isDefect` → `Boolean` |
 
 Ok rail
-| `map { s -> s2 }` → `Res<S2, F>` · `flatMap { s -> Res<S2,F> }` → `Res<S2, F>` · `flatten()` (on `Res<Res<S,F>,F>`) |
+| `map { s -> s2 }` → `Res<S2, F>` · `flatMap { s -> Res<S2,F> }` → `Res<S2, F>` · `flatten()` (on `Res<Res<S,F>,F>`) · `filterOrElse({ s -> Boolean }) { s -> f }` → `Res<S, F>` (demote a failing Ok) |
 
 Failure rail
 | `mapFailure { f -> f2 }` → `Res<S, F2>` · `recover { f -> s }` → `Res<S, Nothing>` (not infallible — see caveat 1) · `orElse { f -> Res<S,F2> }` → `Res<S, F2>` |
@@ -75,10 +81,10 @@ Taps — run a side effect on the matching rail, return `this`
 | `onOk { }` · `onFailure { }` · `onDefect { }` |
 
 Combine — fail-fast, left-biased (first non-ok wins)
-| `zip(a, b) { x, y -> r }` (+ arity 3, 4) → `Res<R, F>` |
+| `zip(a, b) { x, y -> r }` (+ arity 3, 4) → `Res<R, F>` · `Iterable<Res<S,F>>.sequence()` → `Res<List<S>, F>` · `Iterable<T>.traverse { t -> Res<S,F> }` → `Res<List<S>, F>` |
 
 Terminal / elimination
-| `fold(onOk, onFailure, onDefect)` → `R` · `getOrNull()` · `failureOrNull()` · `defectOrNull()` · `getOrElse { s }` · `getOrThrow()` (rethrows defect; `FailureException` carrying the payload on failure) |
+| `fold(onOk, onFailure, onDefect)` → `R` · `getOrNull()` · `failureOrNull()` · `defectOrNull()` · `getOrElse { s }` · `getOrDefault(s)` (eager fallback) · `getOrThrow()` (rethrows defect; `FailureException` carrying the payload on failure) |
 
 DSL — `rail { }` builder, receiver `Rail<F>`
 | `rail<S,F> { ... }` → `Res<S, F>` · inside: `res.bind(): S` (unwrap or short-circuit) · `raise(error: F): Nothing` · `ensure(cond) { error }` · `ensureNotNull(x) { error }: S` |
@@ -98,6 +104,15 @@ DSL — `rail { }` builder, receiver `Rail<F>`
   `rail`+`bind` is arity-free (any N) at the cost of one scope-token allocation.
 - **`catchAll` vs `catch<T>`** — `catchAll` for any defect; `catch<IOException>`
   to handle one type and let others pass through.
+- **`catching` vs `rail { }`** — `catching` wraps a *throwing* call at the boundary:
+  `catching { f() }` sends a throw to Defect (like `rail`), but `catching({ e -> … }) { f() }`
+  sends it to a typed **Failure** — which `rail` cannot do (inside `rail` a throw is always a
+  Defect). Use `catching` for expected exceptions that belong in `F`.
+- **`sequence`/`traverse` vs a hand-rolled `rail` loop** — `traverse(xs) { f(it) }` is the
+  named, fail-fast `rail { xs.map { f(it).bind() } }`. Reach for it for batch validation /
+  bulk loads; same left-biased short-circuit as `zip`.
+- **`filterOrElse` vs `flatMap`** — `filterOrElse({ p(it) }) { err(it) }` is the named form of
+  `flatMap { if (p(it)) ok(it) else fail(err(it)) }` — a post-success business rule.
 - **Nested `rail { }`** — `Rail` is `@DslMarker`-annotated, so an inner block
   cannot *implicitly* call the outer scope's `bind`/`raise`. To target the outer
   scope from inside a nested block, qualify explicitly: `this@rail.raise(...)`.
@@ -153,6 +168,33 @@ val safe: Res<Int, String> = ok("x").map { error("boom") }.catchAll { ok(-1) }
 // Combine
 val combined: Res<Int, String> = zip(ok(20), ok(22)) { x, y -> x + y }   // Ok(42)
 ```
+
+## Coroutines / suspend
+
+There is **no separate suspend API** — and you don't need one. Every combinator and
+`rail { }` is `inline`, so a suspend lambda works wherever you're already in a `suspend`
+function. Just call suspend functions directly:
+
+```kotlin
+suspend fun loadOrder(id: Int): Res<Order, String> = rail {
+    val user  = fetchUser(id).bind()        // fetchUser is suspend
+    val cart  = fetchCart(user).bind()      // suspends; bind short-circuits as usual
+    Order(user, cart)
+}
+
+// combinator chains work too, from any suspend context:
+suspend fun price(id: Int): Res<Money, String> =
+    fetchUser(id).flatMap { fetchCart(it) }.map { total(it) }   // both lambdas suspend
+```
+
+- **No `railS`, no `mapS`** — the inline functions inherit the suspend-ness of the call site.
+- **No runtime dependency** — `kotlinx-coroutines` is test-only; the artifact stays zero-dep.
+- **Cancellation is safe.** `CancellationException` is fatal (see `isFatal`), so a cancel at
+  a suspension point **propagates** — it is never sealed into a Defect. (Consequence of the
+  same "don't catch the short-circuit" rule above: the seal only ever catches *non-fatal*
+  throws.)
+- **Sequential only.** No `parZip`/`parTraverse` — for concurrency, drive coroutines
+  yourself (`coroutineScope`/`async`) and `bind()` the awaited `Res` values inside `rail`.
 
 ## Frames — error context on the Failure rail
 

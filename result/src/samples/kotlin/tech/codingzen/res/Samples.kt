@@ -1,5 +1,6 @@
 package tech.codingzen.res
 
+import kotlinx.coroutines.delay
 import java.io.IOException
 
 // Compiled, type-checked usage samples referenced from KDoc via `@sample`.
@@ -48,6 +49,23 @@ internal fun railSample() {
         a + b
     }
     check(sum.getOrNull() == 42)
+}
+
+internal suspend fun suspendRailSample() {
+    // `rail { }` is inline, so it composes inside a suspend function with no special API:
+    // call suspend functions directly and `bind()` their results. A cancellation thrown at
+    // a suspension point stays fatal and propagates — it is never sealed into a Defect.
+    suspend fun fetch(id: Int): Res<Int, String> {
+        delay(1) // a real suspension point
+        return if (id > 0) ok(id * 10) else fail("bad id: $id")
+    }
+
+    val total: Res<Int, String> = rail {
+        val a = fetch(2).bind()
+        val b = fetch(2).bind()
+        a + b
+    }
+    check(total.getOrNull() == 40)
 }
 
 internal fun bindSample() {
@@ -111,4 +129,56 @@ internal fun withFrameSample() {
         }
     }
     check(r.contextChain().single().message == "parsing inputs")
+}
+
+internal fun catchingSample() {
+    val r: Res<Int, Nothing> = catching { "42".toInt() }   // a throw would become a Defect
+    check(r.getOrNull() == 42)
+}
+
+internal fun catchingMappedSample() {
+    val r: Res<Int, String> = catching(transform = { "not a number" }) { "x".toInt() }
+    check(r.failureOrNull() == "not a number")   // NumberFormatException → typed Failure
+}
+
+internal fun mapBothSample() {
+    val r: Res<String, Int> = fail<String>("nope").mapBoth(
+        onOk = { "ok: $it" },
+        onFailure = { it.length },
+    )
+    check(r.failureOrNull() == 4)
+}
+
+internal fun swapSample() {
+    val r: Res<String, Int> = fail<String>("boom").swap()   // Failure payload becomes Ok
+    check(r.getOrNull() == "boom")
+}
+
+internal fun sequenceSample() {
+    val all: Res<List<Int>, String> = listOf(ok(1), ok(2), ok(3)).sequence()
+    check(all.getOrNull() == listOf(1, 2, 3))
+
+    val firstBad: Res<List<Int>, String> = listOf(ok(1), fail("bad"), ok(3)).sequence()
+    check(firstBad.failureOrNull() == "bad")
+}
+
+internal fun traverseSample() {
+    fun parse(s: String): Res<Int, String> =
+        s.toIntOrNull()?.let { ok(it) } ?: fail("not a number: $s")
+
+    val r: Res<List<Int>, String> = listOf("1", "2", "3").traverse { parse(it) }
+    check(r.getOrNull() == listOf(1, 2, 3))
+}
+
+internal fun getOrDefaultSample() {
+    check(fail<String>("x").getOrDefault(0) == 0)
+    check(ok(7).getOrDefault(0) == 7)
+}
+
+internal fun filterOrElseSample() {
+    val r: Res<Int, String> = ok(15).filterOrElse(
+        predicate = { it >= 18 },
+        error = { "under 18: $it" },
+    )
+    check(r.failureOrNull() == "under 18: 15")
 }

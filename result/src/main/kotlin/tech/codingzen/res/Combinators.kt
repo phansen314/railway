@@ -65,6 +65,23 @@ public inline fun <S, F, S2> Res<S, F>.flatMap(transform: (S) -> Res<S2, F>): Re
 /** Collapse a nested ok rail. */
 public fun <S, F> Res<Res<S, F>, F>.flatten(): Res<S, F> = flatMap { it }
 
+/**
+ * Demote an ok value that fails [predicate] to a Failure carrying `error(value)`. Ok values
+ * that pass, and the Failure/Defect rails, pass through untouched. A non-fatal throw inside
+ * either lambda is routed to the Defect rail. The named complement of
+ * `flatMap { if (p(it)) ok(it) else fail(error(it)) }`.
+ *
+ * @sample tech.codingzen.res.filterOrElseSample
+ */
+public inline fun <S, F> Res<S, F>.filterOrElse(predicate: (S) -> Boolean, error: (S) -> F): Res<S, F> {
+    val r = raw
+    if (r is Err) return Res(r)
+    return sealToDefect {
+        val v = unwrapOk(r) as S
+        if (predicate(v)) ok(v) else fail(error(v))
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Failure rail
 // ---------------------------------------------------------------------------
@@ -114,6 +131,43 @@ public inline fun <S, F, F2> Res<S, F>.orElse(alternative: (F) -> Res<S, F2>): R
 }
 
 // ---------------------------------------------------------------------------
+// Both rails
+// ---------------------------------------------------------------------------
+
+/**
+ * Transform whichever of the Ok / Failure rails is present in a single pass — the typical
+ * shape at an API boundary (Ok becomes a payload, Failure becomes an error DTO). A Defect
+ * passes through untouched; the Failure's context frames are preserved across the payload
+ * change (like [mapFailure]). A non-fatal throw inside either lambda routes to the Defect rail.
+ *
+ * @sample tech.codingzen.res.mapBothSample
+ */
+public inline fun <S, F, S2, F2> Res<S, F>.mapBoth(onOk: (S) -> S2, onFailure: (F) -> F2): Res<S2, F2> {
+    val r = raw
+    return when {
+        r is Failed<*> -> sealToDefect { Res(Failed(onFailure(r.error as F), r.frames)) }
+        r is Defect -> Res(r)
+        else -> sealToDefect { ok(onOk(unwrapOk(r) as S)) }
+    }
+}
+
+/**
+ * Exchange the Ok and Failure rails: an Ok value becomes the failure payload and a Failure
+ * payload becomes the ok value. A Defect stays a Defect.
+ *
+ * **Frames are dropped:** the Ok rail cannot hold context frames, so a swapped Failure's
+ * breadcrumbs do not survive. Swap before attaching frames, not after.
+ *
+ * @sample tech.codingzen.res.swapSample
+ */
+public fun <S, F> Res<S, F>.swap(): Res<F, S> = when (val r = raw) {
+    is Failed<*> -> ok(r.error as F)
+    is Defect -> Res(r)
+    is OkBox -> fail(r.value as S)
+    else -> fail(r as S)
+}
+
+// ---------------------------------------------------------------------------
 // Terminal / elimination
 // ---------------------------------------------------------------------------
 
@@ -159,6 +213,13 @@ public fun Res<*, *>.defectOrNull(): Throwable? = (raw as? Defect)?.throwable
 /** The ok value, or [fallback] on any non-ok rail. */
 public inline fun <S> Res<S, *>.getOrElse(fallback: () -> S): S = when (val r = raw) {
     is Err -> fallback()
+    is OkBox -> r.value as S
+    else -> r as S
+}
+
+/** The ok value, or the constant [value] on any non-ok rail (the eager [getOrElse]). */
+public fun <S> Res<S, *>.getOrDefault(value: S): S = when (val r = raw) {
+    is Err -> value
     is OkBox -> r.value as S
     else -> r as S
 }

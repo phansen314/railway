@@ -124,7 +124,13 @@ public inline fun <S, F> Rail<F>.withFrame(
  * succeeded — the intended Failure/Defect is lost. Catch *narrowly* (the specific
  * exception you expect); a narrow catch never matches `RailHalt`.
  *
+ * **Coroutines.** `rail` is `inline`, so it composes inside a `suspend` function with no
+ * special builder: call suspend functions directly and `bind()` their `Res` results.
+ * Cancellation is fatal (see [isFatal]), so a `CancellationException` at a suspension
+ * point propagates rather than being sealed into a Defect.
+ *
  * @sample tech.codingzen.res.railSample
+ * @sample tech.codingzen.res.suspendRailSample
  */
 public inline fun <S, F> rail(block: Rail<F>.() -> S): Res<S, F> {
     val scope = Rail<F>()

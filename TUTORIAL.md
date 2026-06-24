@@ -473,12 +473,51 @@ loadUser(id).context({ "loading user $id" }, { SourceLocation("UserService.kt", 
 
 ---
 
-## 11. Where to go next
+## 11. Using results with coroutines
+
+Everything you've seen works unchanged inside a `suspend` function — there is no separate
+"async" API to learn. The combinators and `rail { }` are all `inline`, so the lambdas you
+pass them may call suspend functions whenever the surrounding code is itself `suspend`:
+
+```kotlin
+suspend fun fetchUser(id: Int): Res<User, String> { /* hits the network */ }
+suspend fun fetchCart(u: User): Res<Cart, String> { /* hits the network */ }
+
+suspend fun loadOrder(id: Int): Res<Order, String> = rail {
+    val user = fetchUser(id).bind()    // suspends, then unwraps (or short-circuits)
+    val cart = fetchCart(user).bind()
+    Order(user, cart)
+}
+
+// Chaining style works too:
+suspend fun loadOrder2(id: Int): Res<Order, String> =
+    fetchUser(id).flatMap { fetchCart(it) }.map { Order(it.user, it) }
+```
+
+No `railS`, no `mapSuspend` — the same `rail`, `map`, `flatMap` you already know.
+
+One thing to know: **cancellation always wins.** If the coroutine is cancelled at a
+suspension point, the `CancellationException` propagates straight out — it is *not* turned
+into a Defect. (Defects are for unexpected *bugs*; a cancellation is a control signal, so
+swallowing it would break structured concurrency.) This is the same principle as §6's "don't
+catch the short-circuit": the library only ever seals *non-fatal* throws.
+
+For running several results **concurrently**, the library stays out of your way: use the
+standard `coroutineScope { async { … } }`, then `bind()` the awaited `Res` values inside a
+`rail { }`. There are no built-in `parZip`/`parTraverse` combinators.
+
+> **Dependency note:** suspend support needs nothing extra — `railway` itself pulls in no
+> coroutines artifact. You only depend on `kotlinx-coroutines` if *your* code does.
+
+---
+
+## 12. Where to go next
 
 You now know the whole shape of the library: two constructors (`ok`/`fail`), the
 Ok-rail combinators (`map`/`flatMap`), the eliminators (`fold` and friends), the
-imperative `rail { }` builder, Failure recovery, the hidden Defect rail, `zip`, and
-context frames. That's enough to use `railway` for real.
+imperative `rail { }` builder, Failure recovery, the hidden Defect rail, `zip`,
+context frames, and how it all composes under coroutines. That's enough to use
+`railway` for real.
 
 When you need more:
 
@@ -496,7 +535,7 @@ When you need more:
 
 ```kotlin
 dependencies {
-    implementation("tech.codingzen:railway:1.0.1")
+    implementation("tech.codingzen:railway:1.1.0")
 }
 ```
 
