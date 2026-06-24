@@ -1,5 +1,8 @@
 # railway
 
+[![Maven Central](https://img.shields.io/maven-central/v/tech.codingzen/railway)](https://central.sonatype.com/artifact/tech.codingzen/railway)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A railway-oriented **result type** for Kotlin/JVM. `Res<S, F>` is a zero-allocation
 `@JvmInline value class` with three rails:
 
@@ -7,17 +10,19 @@ A railway-oriented **result type** for Kotlin/JVM. `Res<S, F>` is a zero-allocat
 - **Failure** — typed, expected domain errors of type `F` (`fail` / `raise`).
 - **Defect** — unexpected `Throwable`s, a hidden third channel not shown in the type.
 
-It offers combinators (`map`/`flatMap`/`fold`/`recover`/…), a defect-narrowing set
-(`catchAll`/`catch<T>`/`recoverDefect`), `zip`, an imperative `rail { }` builder with
+It offers combinators (`map`/`flatMap`/`fold`/`recover`/`mapBoth`/`swap`/`filterOrElse`/…),
+a defect-narrowing set (`catchAll`/`catch<T>`/`recoverDefect`), boundary capture (`catching`),
+collection collapse (`sequence`/`traverse`), `zip`, an imperative `rail { }` builder with
 `bind()` / `raise()` / `ensure()`, and **error-context frames** (`.context { }` /
-`withFrame`) that attach debugging breadcrumbs to the Failure rail. The library lives in
-the `:result` module, package `tech.codingzen.res`.
+`withFrame`) that attach debugging breadcrumbs to the Failure rail. Everything is `inline`, so
+it composes unchanged inside `suspend` functions. The library lives in the `:result` module,
+package `tech.codingzen.res`.
 
 ## Install
 
 ```kotlin
 dependencies {
-    implementation("tech.codingzen:railway:1.0.1")
+    implementation("tech.codingzen:railway:1.1.0")
 }
 ```
 

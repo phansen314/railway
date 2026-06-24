@@ -473,7 +473,88 @@ loadUser(id).context({ "loading user $id" }, { SourceLocation("UserService.kt", 
 
 ---
 
-## 11. Using results with coroutines
+## 11. More combinators (v1.1)
+
+A handful of convenience combinators round out the core. None are essential — each is a named
+shortcut for something you could already write — but they read better at the call site.
+
+### Wrapping throwing code: `catching`
+
+The library speaks in `Res`, but the JVM throws. `catching { }` is the adapter at the boundary —
+it runs a block and routes a thrown exception to the **Defect** rail:
+
+```kotlin
+val text: Res<String, Nothing> = catching { File(path).readText() }   // throw → Defect
+```
+
+When the exception is something you *expect* and want in the type, give `catching` a mapper and
+the throw lands on the **Failure** rail instead — the one thing `rail { }` can't do (inside
+`rail`, a throw is always a Defect):
+
+```kotlin
+val port: Res<Int, String> = catching(transform = { "bad port" }) { System.getenv("PORT").toInt() }
+```
+
+### Many results at once: `sequence` and `traverse`
+
+When you have a *collection* of fallible steps and want all-or-nothing, `traverse` maps each
+element and collapses the results into one — fail-fast and left-biased, exactly like `zip`:
+
+```kotlin
+fun parse(s: String): Res<Int, String> =
+    s.toIntOrNull()?.let { ok(it) } ?: fail("not a number: $s")
+
+val nums: Res<List<Int>, String> = listOf("1", "2", "3").traverse { parse(it) }   // ok([1,2,3])
+val bad:  Res<List<Int>, String> = listOf("1", "x", "3").traverse { parse(it) }   // fail("not a number: x")
+```
+
+If you already hold a `List<Res<…>>`, `sequence()` collapses it directly:
+
+```kotlin
+listOf(ok(1), ok(2), ok(3)).sequence()   // Res<List<Int>, …> = ok([1, 2, 3])
+```
+
+### Touching both rails: `mapBoth` and `swap`
+
+`mapBoth` transforms whichever of Ok/Failure is present in a single pass — handy at an API edge
+where Ok becomes a payload and Failure becomes an error body (a Defect passes straight through):
+
+```kotlin
+val response: Res<Json, ErrorBody> = result.mapBoth(
+    onOk      = { it.toJson() },
+    onFailure = { ErrorBody(code = 400, message = it) },
+)
+```
+
+`swap()` exchanges the Ok and Failure rails (a Defect stays a Defect) — occasionally the failure
+is the value you're actually after:
+
+```kotlin
+ok(7).swap()            // fail(7)
+fail("boom").swap()     // ok("boom")
+```
+
+### Small conveniences: `filterOrElse` and `getOrDefault`
+
+`filterOrElse` demotes an Ok that fails a predicate to a Failure — a business rule applied
+*after* a successful step:
+
+```kotlin
+loadUser(id).filterOrElse(
+    predicate = { it.age >= 18 },
+    error     = { "under 18: ${it.age}" },
+)
+```
+
+And `getOrDefault` is the eager twin of `getOrElse` — a constant fallback instead of a lambda:
+
+```kotlin
+readSetting("retries").getOrDefault(3)
+```
+
+---
+
+## 12. Using results with coroutines
 
 Everything you've seen works unchanged inside a `suspend` function — there is no separate
 "async" API to learn. The combinators and `rail { }` are all `inline`, so the lambdas you
@@ -511,13 +592,13 @@ standard `coroutineScope { async { … } }`, then `bind()` the awaited `Res` val
 
 ---
 
-## 12. Where to go next
+## 13. Where to go next
 
 You now know the whole shape of the library: two constructors (`ok`/`fail`), the
-Ok-rail combinators (`map`/`flatMap`), the eliminators (`fold` and friends), the
-imperative `rail { }` builder, Failure recovery, the hidden Defect rail, `zip`,
-context frames, and how it all composes under coroutines. That's enough to use
-`railway` for real.
+Ok-rail combinators (`map`/`flatMap`/`filterOrElse`), the eliminators (`fold` and
+friends), the imperative `rail { }` builder, Failure recovery, the hidden Defect rail,
+boundary capture (`catching`), `zip`/`sequence`/`traverse`, `mapBoth`/`swap`, context
+frames, and how it all composes under coroutines. That's enough to use `railway` for real.
 
 When you need more:
 

@@ -182,3 +182,113 @@ internal fun filterOrElseSample() {
     )
     check(r.failureOrNull() == "under 18: 15")
 }
+
+internal fun onOkSample() {
+    var seen = 0
+    ok(7).onOk { seen = it }   // fires on Ok, returns the result unchanged
+    check(seen == 7)
+}
+
+internal fun onFailureSample() {
+    var logged = ""
+    fail<String>("boom").onFailure { logged = it }
+    check(logged == "boom")
+}
+
+internal fun onDefectSample() {
+    var caught: Throwable? = null
+    ok<Int>(1).map { error("kaboom") }.onDefect { caught = it }   // the thrown error became a Defect
+    check(caught?.message == "kaboom")
+}
+
+internal fun mapFailureSample() {
+    val r: Res<Int, String> = fail<Int>(404).mapFailure { "http $it" }
+    check(r.failureOrNull() == "http 404")
+}
+
+internal fun recoverSample() {
+    val r: Res<Int, String> = fail("nope")
+    check(r.recover { 0 }.getOrNull() == 0)   // failure → ok fallback value
+}
+
+internal fun orElseSample() {
+    val r: Res<Int, String> = fail("primary")
+    check(r.orElse { ok(1) }.getOrNull() == 1)   // try a different result
+}
+
+internal fun getOrNullSample() {
+    check(ok(42).getOrNull() == 42)
+    check(fail<String>("x").getOrNull() == null)
+}
+
+internal fun getOrElseSample() {
+    val r: Res<Int, String> = fail("x")
+    check(r.getOrElse { -1 } == -1)   // lazy fallback on any non-ok rail
+}
+
+internal fun getOrThrowSample() {
+    check(ok(7).getOrThrow() == 7)
+    val recovered = try {
+        fail<String>("boom").getOrThrow(); false
+    } catch (e: FailureException) {
+        e.error == "boom"   // failure throws a FailureException carrying the payload
+    }
+    check(recovered)
+}
+
+internal fun failureOrNullSample() {
+    check(fail<String>("boom").failureOrNull() == "boom")
+    check(ok(1).failureOrNull() == null)
+}
+
+internal fun defectOrNullSample() {
+    val d = ok<Int>(1).map { error("boom") }
+    check(d.defectOrNull()?.message == "boom")
+}
+
+internal fun mapDefectSample() {
+    val r = ok<Int>(1).map { error("low") }
+        .mapDefect { IllegalStateException("wrapped: ${it.message}") }
+    check(r.defectOrNull()?.message == "wrapped: low")
+}
+
+internal fun contextFrameSample() {
+    val r: Res<Int, String> = fail<String>("denied")
+        .contextFrame { Frame("authorizing", attachment = 42) }   // structured breadcrumb
+    check(r.contextChain().single().attachment == 42)
+}
+
+internal fun contextChainSample() {
+    val r: Res<Int, String> = fail<String>("not found").context { "loading user 42" }
+    check(r.contextChain().single().message == "loading user 42")
+}
+
+internal fun renderContextSample() {
+    val r: Res<Int, String> = fail<String>("not found").context { "loading user 42" }
+    check(r.renderContext().contains("not found"))
+}
+
+internal fun contextSummarySample() {
+    val r: Res<Int, String> = fail<String>("not found").context { "loading user 42" }
+    check(r.contextSummary() == "loading user 42 → not found")
+}
+
+internal fun contextMapSample() {
+    val r: Res<Int, String> = fail<String>("not found").context { "loading" }
+    check(r.contextMap()["error"] == "not found")
+}
+
+internal fun findAttachmentSample() {
+    val r: Res<Int, String> = fail<String>("denied").contextFrame { Frame("auth", attachment = 7) }
+    check(r.contextChain().findAttachment<Int>() == 7)
+}
+
+internal fun zip3Sample() {
+    val r: Res<Int, String> = zip(ok(1), ok(2), ok(3)) { a, b, c -> a + b + c }
+    check(r.getOrNull() == 6)
+}
+
+internal fun zip4Sample() {
+    val r: Res<Int, String> = zip(ok(1), ok(2), ok(3), ok(4)) { a, b, c, d -> a + b + c + d }
+    check(r.getOrNull() == 10)
+}

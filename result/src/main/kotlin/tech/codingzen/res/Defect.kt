@@ -45,7 +45,11 @@ public inline fun <S, F> Res<S, F>.recoverDefect(transform: (Throwable) -> S): R
     return sealToDefect { ok(transform(r.throwable)) }
 }
 
-/** Transform the Defect's throwable, staying on the Defect rail. Ok and Failure pass through. */
+/**
+ * Transform the Defect's throwable, staying on the Defect rail. Ok and Failure pass through.
+ *
+ * @sample tech.codingzen.res.mapDefectSample
+ */
 public inline fun <S, F> Res<S, F>.mapDefect(transform: (Throwable) -> Throwable): Res<S, F> {
     val r = raw
     if (r !is Defect) return this

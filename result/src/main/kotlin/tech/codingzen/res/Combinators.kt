@@ -89,6 +89,8 @@ public inline fun <S, F> Res<S, F>.filterOrElse(predicate: (S) -> Boolean, error
 /**
  * Transform the failure payload. Ok and defect pass through untouched. A non-fatal
  * throw inside [transform] is routed to the Defect rail.
+ *
+ * @sample tech.codingzen.res.mapFailureSample
  */
 public inline fun <S, F, F2> Res<S, F>.mapFailure(transform: (F) -> F2): Res<S, F2> {
     val r = raw
@@ -107,6 +109,8 @@ public inline fun <S, F, F2> Res<S, F>.mapFailure(transform: (F) -> F2): Res<S, 
  * and [transform] may itself throw to the Defect rail. `Nothing` failure ≠
  * cannot-fail. For an Ok-only value, also handle defects ([recoverDefect] / [fold] /
  * [getOrNull]).
+ *
+ * @sample tech.codingzen.res.recoverSample
  */
 public inline fun <S, F> Res<S, F>.recover(transform: (F) -> S): Res<S, Nothing> {
     val r = raw
@@ -117,6 +121,8 @@ public inline fun <S, F> Res<S, F>.recover(transform: (F) -> S): Res<S, Nothing>
 /**
  * Replace a failure with an alternative result. Ok values and defects pass through
  * untouched. A non-fatal throw inside [alternative] is routed to Defect.
+ *
+ * @sample tech.codingzen.res.orElseSample
  */
 public inline fun <S, F, F2> Res<S, F>.orElse(alternative: (F) -> Res<S, F2>): Res<S, F2> {
     val r = raw
@@ -194,6 +200,8 @@ public inline fun <S, F, R> Res<S, F>.fold(
  * **Ambiguous when `null` is a valid ok value:** `ok(null)` and any Failure/Defect all
  * return `null`, so a `null` result tells you nothing about the rail. Use [fold],
  * [isOk], or [getOrThrow] when an ok `null` must be distinguished from a non-ok rail.
+ *
+ * @sample tech.codingzen.res.getOrNullSample
  */
 public fun <S> Res<S, *>.getOrNull(): S? = when (val r = raw) {
     is Err -> null
@@ -201,16 +209,28 @@ public fun <S> Res<S, *>.getOrNull(): S? = when (val r = raw) {
     else -> r as S
 }
 
-/** The failure payload, or `null` on the Ok/Defect rails. */
+/**
+ * The failure payload, or `null` on the Ok/Defect rails.
+ *
+ * @sample tech.codingzen.res.failureOrNullSample
+ */
 public fun <F> Res<*, F>.failureOrNull(): F? {
     val r = raw
     return if (r is Failed<*>) r.error as F else null
 }
 
-/** The defect throwable, or `null` on the Ok/Failure rails. */
+/**
+ * The defect throwable, or `null` on the Ok/Failure rails.
+ *
+ * @sample tech.codingzen.res.defectOrNullSample
+ */
 public fun Res<*, *>.defectOrNull(): Throwable? = (raw as? Defect)?.throwable
 
-/** The ok value, or [fallback] on any non-ok rail. */
+/**
+ * The ok value, or [fallback] on any non-ok rail.
+ *
+ * @sample tech.codingzen.res.getOrElseSample
+ */
 public inline fun <S> Res<S, *>.getOrElse(fallback: () -> S): S = when (val r = raw) {
     is Err -> fallback()
     is OkBox -> r.value as S
@@ -236,6 +256,8 @@ public class FailureException(
 /**
  * The ok value, or throw. A defect re-throws its original throwable; a failure throws
  * a [FailureException] carrying the payload (recoverable via [FailureException.error]).
+ *
+ * @sample tech.codingzen.res.getOrThrowSample
  */
 public fun <S> Res<S, *>.getOrThrow(): S = when (val r = raw) {
     is Defect -> throw r.throwable

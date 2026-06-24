@@ -25,6 +25,8 @@ dokka {
     dokkaSourceSets.named("main") {
         // Source of the functions referenced by `@sample` tags in KDoc.
         samples.from("src/samples/kotlin")
+        // Module- and package-level documentation (the landing page + package overview).
+        includes.from("module.md")
     }
 }
 

@@ -10,7 +10,11 @@ package tech.codingzen.res
 // Failure-rail concept. Frames are exposed innermost-first (index 0 = closest to the error)
 // except [contextSummary], which reads outermost-first for natural left-to-right prose.
 
-/** The frames on this Failure, innermost-first. Empty on Ok / Defect. */
+/**
+ * The frames on this Failure, innermost-first. Empty on Ok / Defect.
+ *
+ * @sample tech.codingzen.res.contextChainSample
+ */
 public fun Res<*, *>.contextChain(): List<Frame> {
     val r = raw
     return if (r is Failed<*>) r.frames.toFrameList() else emptyList()
@@ -19,6 +23,8 @@ public fun Res<*, *>.contextChain(): List<Frame> {
 /**
  * Multi-line dump: the error followed by each frame (index, message, optional location and
  * attachment), innermost-first. Empty string on Ok / Defect.
+ *
+ * @sample tech.codingzen.res.renderContextSample
  */
 public fun Res<*, *>.renderContext(): String {
     val r = raw
@@ -46,6 +52,8 @@ public fun Res<*, *>.renderContext(): String {
 /**
  * One-line breadcrumb `"outer → inner → Error"` (outermost-first). Just the error string on
  * Ok / Defect or a frameless Failure.
+ *
+ * @sample tech.codingzen.res.contextSummarySample
  */
 public fun Res<*, *>.contextSummary(): String {
     val r = raw
@@ -58,7 +66,11 @@ public fun Res<*, *>.contextSummary(): String {
     }
 }
 
-/** Structured shape for JSON logging: `{ "error": …, "frames": [ { message, location?, attachment? } ] }`. */
+/**
+ * Structured shape for JSON logging: `{ "error": …, "frames": [ { message, location?, attachment? } ] }`.
+ *
+ * @sample tech.codingzen.res.contextMapSample
+ */
 public fun Res<*, *>.contextMap(): Map<String, Any?> {
     val r = raw
     if (r !is Failed<*>) return emptyMap()
@@ -74,6 +86,10 @@ public fun Res<*, *>.contextMap(): Map<String, Any?> {
     )
 }
 
-/** First frame attachment of type [T], or null. e.g. `res.contextChain().findAttachment<RequestId>()`. */
+/**
+ * First frame attachment of type [T], or null. e.g. `res.contextChain().findAttachment<RequestId>()`.
+ *
+ * @sample tech.codingzen.res.findAttachmentSample
+ */
 public inline fun <reified T> List<Frame>.findAttachment(): T? =
     firstOrNull { it.attachment is T }?.attachment as T?

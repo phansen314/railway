@@ -34,7 +34,11 @@ public inline fun <A, B, F, R> zip(
     return sealToDefect { ok(combine(unwrapOk(ra) as A, unwrapOk(rb) as B)) }
 }
 
-/** Combine three results. The first non-ok (left → right) short-circuits. */
+/**
+ * Combine three results. The first non-ok (left → right) short-circuits.
+ *
+ * @sample tech.codingzen.res.zip3Sample
+ */
 public inline fun <A, B, C, F, R> zip(
     a: Res<A, F>,
     b: Res<B, F>,
@@ -47,7 +51,11 @@ public inline fun <A, B, C, F, R> zip(
     return sealToDefect { ok(combine(unwrapOk(ra) as A, unwrapOk(rb) as B, unwrapOk(rc) as C)) }
 }
 
-/** Combine four results. The first non-ok (left → right) short-circuits. */
+/**
+ * Combine four results. The first non-ok (left → right) short-circuits.
+ *
+ * @sample tech.codingzen.res.zip4Sample
+ */
 public inline fun <A, B, C, D, F, R> zip(
     a: Res<A, F>,
     b: Res<B, F>,

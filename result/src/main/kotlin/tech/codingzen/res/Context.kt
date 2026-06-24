@@ -37,7 +37,11 @@ public inline fun <S, F> Res<S, F>.context(
     return Res(Failed(r.error, FrameChain.push(r.frames, Frame(message(), location = location()))))
 }
 
-/** Push a fully-built [Frame] (e.g. with a structured `attachment`). No-op on Ok / Defect. */
+/**
+ * Push a fully-built [Frame] (e.g. with a structured `attachment`). No-op on Ok / Defect.
+ *
+ * @sample tech.codingzen.res.contextFrameSample
+ */
 public inline fun <S, F> Res<S, F>.contextFrame(frame: () -> Frame): Res<S, F> {
     val r = raw
     if (r !is Failed<*>) return this
